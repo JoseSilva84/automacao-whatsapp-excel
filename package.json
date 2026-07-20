@@ -1,0 +1,21 @@
+{
+  "name": "automacao-whatsapp-excel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Automacao para ler agendamentos salvos no proprio WhatsApp e enviar para planilha e Google Calendar.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test:ia": "node src/test-ia.js",
+    "google:auth": "node src/google-auth.js"
+  },
+  "dependencies": {
+    "chrono-node": "^2.7.7",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "googleapis": "^144.0.0",
+    "openai": "^4.77.0",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}
