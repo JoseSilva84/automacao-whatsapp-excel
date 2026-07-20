@@ -91,7 +91,7 @@ async function parseWithGemini(text) {
   const model = String(config.geminiModel || 'gemini-2.5-flash').replace(/^models\//, '');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -124,6 +124,26 @@ async function parseWithGemini(text) {
 
   if (!answer) return null;
   return normalizeAiAppointment(parseJsonResponse(answer), text);
+}
+
+async function fetchWithRetry(url, options, retries = 2) {
+  let lastResponse;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const response = await fetch(url, options);
+    if (![429, 500, 502, 503, 504].includes(response.status)) return response;
+
+    lastResponse = response;
+    if (attempt < retries) {
+      await wait(1000 * (attempt + 1));
+    }
+  }
+
+  return lastResponse;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function parseWithOpenAI(text) {

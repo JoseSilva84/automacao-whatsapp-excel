@@ -9,7 +9,7 @@ module.exports = {
   aiProvider: process.env.AI_PROVIDER || 'auto',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
   whatsappSelfChatName: process.env.WHATSAPP_SELF_CHAT_NAME || 'Voce',
   timezone: process.env.TIMEZONE || 'America/Fortaleza',
   googleCalendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
