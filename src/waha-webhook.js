@@ -46,6 +46,60 @@ function isSelfMessage(event) {
   return !me || payload.from === me || payload.to === me || payload.from === payload.to;
 }
 
+function findFirstString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function extractZproMessage(event) {
+  const data = event.data || event.payload || event.message || event;
+  const message = data.message || data.msg || data;
+  const key = message.key || data.key || {};
+
+  const text = findFirstString(
+    message.body,
+    message.text,
+    message.content,
+    message.conversation,
+    message.message?.conversation,
+    message.message?.extendedTextMessage?.text,
+    data.body,
+    data.text,
+    data.content,
+    data.message?.conversation,
+    data.message?.extendedTextMessage?.text
+  );
+
+  const id = findFirstString(
+    message.id,
+    message.messageId,
+    data.id,
+    data.messageId,
+    key.id
+  );
+
+  const fromMe = Boolean(
+    message.fromMe ||
+    data.fromMe ||
+    key.fromMe ||
+    message.key?.fromMe
+  );
+
+  const remoteJid = findFirstString(
+    message.remoteJid,
+    data.remoteJid,
+    key.remoteJid,
+    message.key?.remoteJid,
+    message.from,
+    data.from
+  );
+
+  const isGroup = remoteJid.endsWith('@g.us') || remoteJid.includes('-');
+  return { id, text, fromMe, isGroup };
+}
+
 async function handleWahaWebhook(request, response, url) {
   if (!isAuthorized(request, url)) {
     sendJson(response, 401, { ok: false, error: 'unauthorized' });
@@ -82,6 +136,37 @@ async function handleWahaWebhook(request, response, url) {
   sendJson(response, 200, { ok: true, saved: Boolean(appointment) });
 }
 
+async function handleZproWebhook(request, response, url) {
+  if (!isAuthorized(request, url)) {
+    sendJson(response, 401, { ok: false, error: 'unauthorized' });
+    return;
+  }
+
+  const rawBody = await readBody(request);
+  const event = JSON.parse(rawBody || '{}');
+  const zproMessage = extractZproMessage(event);
+
+  if (!zproMessage.text) {
+    sendJson(response, 200, { ok: true, ignored: 'empty_message' });
+    return;
+  }
+
+  if (zproMessage.isGroup) {
+    sendJson(response, 200, { ok: true, ignored: 'group_message' });
+    return;
+  }
+
+  if (zproMessage.id && processedMessages.has(zproMessage.id)) {
+    sendJson(response, 200, { ok: true, ignored: 'duplicate' });
+    return;
+  }
+
+  if (zproMessage.id) processedMessages.add(zproMessage.id);
+
+  const appointment = await handleAppointmentText(zproMessage.text);
+  sendJson(response, 200, { ok: true, saved: Boolean(appointment) });
+}
+
 const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
@@ -96,14 +181,21 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'POST' && url.pathname === '/webhooks/zpro') {
+      await handleZproWebhook(request, response, url);
+      return;
+    }
+
     sendJson(response, 404, { ok: false, error: 'not_found' });
   } catch (error) {
-    console.error('Erro no webhook WAHA:', error);
+    console.error('Erro no webhook WhatsApp:', error);
     sendJson(response, 500, { ok: false, error: 'internal_error' });
   }
 });
 
 server.listen(port, () => {
-  console.log(`Webhook WAHA ouvindo na porta ${port}`);
+  console.log(`Webhooks WhatsApp ouvindo na porta ${port}`);
+  console.log(`WAHA: /webhooks/waha`);
+  console.log(`ZPRO: /webhooks/zpro`);
   console.log(`Sessao esperada: ${config.wahaSessionName || 'qualquer sessao'}`);
 });
