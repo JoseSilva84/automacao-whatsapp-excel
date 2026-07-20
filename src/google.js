@@ -5,6 +5,25 @@ const config = require('./config');
 let calendarAuthClient;
 let sheetsAuthClient;
 
+const sheetHeaders = ['Evento', 'Data', 'Horario', 'Local'];
+
+function formatBrazilDate(value) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: config.timezone,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(new Date(value));
+}
+
+function formatBrazilTime(value) {
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: config.timezone,
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value));
+}
+
 async function getCalendarAuthClient() {
   if (!calendarAuthClient) {
     calendarAuthClient = await authorize();
@@ -61,13 +80,10 @@ async function appendToGoogleSheet(appointment) {
   if (!config.googleSpreadsheetId) return null;
 
   const values = [[
-    new Date().toISOString(),
     appointment.title,
-    appointment.start,
-    appointment.end,
-    appointment.location || '',
-    appointment.notes || '',
-    appointment.originalText
+    formatBrazilDate(appointment.start),
+    formatBrazilTime(appointment.start),
+    appointment.location || ''
   ]];
 
   if (config.dryRun) {
@@ -82,7 +98,7 @@ async function appendToGoogleSheet(appointment) {
 
   const response = await sheets.spreadsheets.values.append({
     spreadsheetId: config.googleSpreadsheetId,
-    range: `${config.googleSheetName}!A:G`,
+    range: `${config.googleSheetName}!A:D`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values }
@@ -120,28 +136,13 @@ async function ensureSheetExists(sheets) {
 }
 
 async function ensureSheetHeader(sheets) {
-  const range = `${config.googleSheetName}!A1:G1`;
-  const current = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.googleSpreadsheetId,
-    range
-  }).catch(() => null);
-
-  if (current?.data?.values?.length) return;
-
+  const range = `${config.googleSheetName}!A1:D1`;
   await sheets.spreadsheets.values.update({
     spreadsheetId: config.googleSpreadsheetId,
     range,
     valueInputOption: 'USER_ENTERED',
     requestBody: {
-      values: [[
-        'Registrado em',
-        'Titulo',
-        'Inicio',
-        'Fim',
-        'Local',
-        'Observacoes',
-        'Mensagem original'
-      ]]
+      values: [sheetHeaders]
     }
   });
 }

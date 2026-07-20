@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test:ia": "node src/test-ia.js",
+    "sheet:format": "node src/format-sheet.js",
+    "sheet:delete-rows": "node src/delete-sheet-rows.js",
     "google:auth": "node src/google-auth.js"
   },
   "dependencies": {
