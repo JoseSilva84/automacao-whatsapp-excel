@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const { parseAppointment } = require('./parser');
 const { appendToExcel } = require('./excel');
+const { appendToGoogleSheet } = require('./google');
 
 async function main() {
   const text = process.argv.slice(2).join(' ').trim()
@@ -20,6 +21,9 @@ async function main() {
 
   const excelPath = await appendToExcel(appointment);
   console.log(`Salvo no Excel: ${excelPath}`);
+
+  await appendToGoogleSheet(appointment);
+  console.log('Salvo no Google Sheets, se GOOGLE_SPREADSHEET_ID estiver configurado.');
 }
 
 main().catch((error) => {

@@ -2,13 +2,12 @@ const fs = require('fs/promises');
 const readline = require('readline/promises');
 const { stdin: input, stdout: output } = require('process');
 const { google } = require('googleapis');
+const config = require('./config');
 
 const CREDENTIALS_PATH = 'credentials.json';
 const TOKEN_PATH = 'token.json';
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/spreadsheets'
-];
+const CALENDAR_SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
+const SHEETS_SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
 async function loadCredentials() {
   const raw = await fs.readFile(CREDENTIALS_PATH, 'utf8');
@@ -35,11 +34,20 @@ async function authorize() {
   }
 }
 
+async function authorizeServiceAccount(scopes = SHEETS_SCOPES) {
+  const auth = new google.auth.GoogleAuth({
+    keyFile: config.googleServiceAccountFile,
+    scopes
+  });
+
+  return auth.getClient();
+}
+
 async function getNewToken(oauth2Client) {
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
-    scope: SCOPES
+    scope: [...CALENDAR_SCOPES, ...SHEETS_SCOPES]
   });
 
   console.log('\nAutorize o acesso abrindo este link:\n');
@@ -65,4 +73,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { authorize };
+module.exports = { authorize, authorizeServiceAccount };

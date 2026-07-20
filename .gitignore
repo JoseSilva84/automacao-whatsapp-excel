@@ -4,5 +4,7 @@ node_modules/
 .env
 credentials.json
 token.json
+service-account.json
+gen-lang-client-*.json
 agendamentos.xlsx
 npm-debug.log*

@@ -1,14 +1,22 @@
 const { google } = require('googleapis');
-const { authorize } = require('./google-auth');
+const { authorize, authorizeServiceAccount } = require('./google-auth');
 const config = require('./config');
 
-let authClient;
+let calendarAuthClient;
+let sheetsAuthClient;
 
-async function getAuthClient() {
-  if (!authClient) {
-    authClient = await authorize();
+async function getCalendarAuthClient() {
+  if (!calendarAuthClient) {
+    calendarAuthClient = await authorize();
   }
-  return authClient;
+  return calendarAuthClient;
+}
+
+async function getSheetsAuthClient() {
+  if (!sheetsAuthClient) {
+    sheetsAuthClient = await authorizeServiceAccount();
+  }
+  return sheetsAuthClient;
 }
 
 function toCalendarEvent(appointment) {
@@ -32,12 +40,14 @@ function toCalendarEvent(appointment) {
 }
 
 async function createCalendarEvent(appointment) {
+  if (!config.googleCalendarEnabled) return null;
+
   if (config.dryRun) {
     console.log('[DRY_RUN] Evento Google Calendar:', toCalendarEvent(appointment));
     return null;
   }
 
-  const auth = await getAuthClient();
+  const auth = await getCalendarAuthClient();
   const calendar = google.calendar({ version: 'v3', auth });
   const response = await calendar.events.insert({
     calendarId: config.googleCalendarId,
@@ -65,8 +75,9 @@ async function appendToGoogleSheet(appointment) {
     return null;
   }
 
-  const auth = await getAuthClient();
+  const auth = await getSheetsAuthClient();
   const sheets = google.sheets({ version: 'v4', auth });
+  await ensureSheetExists(sheets);
   await ensureSheetHeader(sheets);
 
   const response = await sheets.spreadsheets.values.append({
@@ -78,6 +89,34 @@ async function appendToGoogleSheet(appointment) {
   });
 
   return response.data;
+}
+
+async function ensureSheetExists(sheets) {
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId: config.googleSpreadsheetId,
+    fields: 'sheets.properties.title'
+  });
+
+  const exists = spreadsheet.data.sheets?.some(
+    (sheet) => sheet.properties?.title === config.googleSheetName
+  );
+
+  if (exists) return;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: config.googleSpreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          addSheet: {
+            properties: {
+              title: config.googleSheetName
+            }
+          }
+        }
+      ]
+    }
+  });
 }
 
 async function ensureSheetHeader(sheets) {
