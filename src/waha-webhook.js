@@ -100,6 +100,12 @@ function extractZproMessage(event) {
   return { id, text, fromMe, isGroup };
 }
 
+function preview(value, maxLength = 500) {
+  const text = JSON.stringify(value);
+  if (!text) return '';
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
 async function handleWahaWebhook(request, response, url) {
   if (!isAuthorized(request, url)) {
     sendJson(response, 401, { ok: false, error: 'unauthorized' });
@@ -145,13 +151,23 @@ async function handleZproWebhook(request, response, url) {
   const rawBody = await readBody(request);
   const event = JSON.parse(rawBody || '{}');
   const zproMessage = extractZproMessage(event);
+  console.log('Webhook ZPRO recebido:', {
+    event: event.event || event.type || event.action || event.name || '',
+    text: zproMessage.text,
+    fromMe: zproMessage.fromMe,
+    isGroup: zproMessage.isGroup,
+    keys: Object.keys(event || {}),
+    preview: preview(event)
+  });
 
   if (!zproMessage.text) {
+    console.log('Webhook ZPRO ignorado: mensagem vazia ou formato nao reconhecido.');
     sendJson(response, 200, { ok: true, ignored: 'empty_message' });
     return;
   }
 
   if (zproMessage.isGroup) {
+    console.log('Webhook ZPRO ignorado: mensagem de grupo.');
     sendJson(response, 200, { ok: true, ignored: 'group_message' });
     return;
   }
