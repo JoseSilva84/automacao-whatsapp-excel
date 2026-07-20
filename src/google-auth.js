@@ -35,6 +35,16 @@ async function authorize() {
 }
 
 async function authorizeServiceAccount(scopes = SHEETS_SCOPES) {
+  if (config.googleServiceAccountJson) {
+    const credentials = JSON.parse(config.googleServiceAccountJson);
+    const auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes
+    });
+
+    return auth.getClient();
+  }
+
   const auth = new google.auth.GoogleAuth({
     keyFile: config.googleServiceAccountFile,
     scopes

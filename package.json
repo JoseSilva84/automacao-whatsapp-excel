@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "waha:webhook": "node src/waha-webhook.js",
     "test:ia": "node src/test-ia.js",
     "sheet:format": "node src/format-sheet.js",
     "sheet:delete-rows": "node src/delete-sheet-rows.js",

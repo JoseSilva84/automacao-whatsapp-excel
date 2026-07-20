@@ -1,9 +1,7 @@
 const qrcode = require('qrcode-terminal');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const config = require('./config');
-const { parseAppointment } = require('./parser');
-const { appendToExcel } = require('./excel');
-const { createCalendarEvent, appendToGoogleSheet } = require('./google');
+const { handleAppointmentText } = require('./appointment-handler');
 
 const processedMessages = new Set();
 
@@ -56,18 +54,7 @@ function normalize(value) {
 }
 
 async function handleMessage(text) {
-  const appointment = await parseAppointment(text);
-  if (!appointment) {
-    console.log('Mensagem ignorada, nao parece ser um agendamento:', text);
-    return;
-  }
-
-  console.log('Agendamento detectado:', appointment);
-  const excelPath = await appendToExcel(appointment);
-  await appendToGoogleSheet(appointment);
-  await createCalendarEvent(appointment);
-
-  console.log(`Agendamento salvo. Excel: ${excelPath}`);
+  await handleAppointmentText(text);
 }
 
 client.initialize();
