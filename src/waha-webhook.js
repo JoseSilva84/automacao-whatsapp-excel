@@ -92,12 +92,21 @@ function extractZproMessage(event) {
     data.remoteJid,
     key.remoteJid,
     message.key?.remoteJid,
+    message.to,
+    data.to,
     message.from,
-    data.from
+    data.from,
+    message.contact?.number,
+    data.contact?.number,
+    data.ticket?.contact?.number
   );
 
   const isGroup = remoteJid.endsWith('@g.us') || remoteJid.includes('-');
   return { id, text, fromMe, remoteJid, isGroup };
+}
+
+function onlyDigits(value) {
+  return String(value || '').replace(/\D/g, '');
 }
 
 function preview(value, maxLength = 500) {
@@ -173,15 +182,19 @@ async function handleZproWebhook(request, response, url) {
     return;
   }
 
-  if (config.zproFromMeOnly && !zproMessage.fromMe) {
-    console.log('Webhook ZPRO ignorado: mensagem nao foi enviada por mim.');
-    sendJson(response, 200, { ok: true, ignored: 'not_from_me' });
+  const selfNumber = onlyDigits(config.zproSelfNumber);
+  const remoteNumber = onlyDigits(zproMessage.remoteJid);
+  const isSelfChat = Boolean(selfNumber && remoteNumber.includes(selfNumber));
+
+  if (selfNumber && !isSelfChat) {
+    console.log('Webhook ZPRO ignorado: mensagem nao foi enviada para meu proprio chat.');
+    sendJson(response, 200, { ok: true, ignored: 'not_self_chat' });
     return;
   }
 
-  if (config.zproSelfNumber && !zproMessage.remoteJid.includes(config.zproSelfNumber)) {
-    console.log('Webhook ZPRO ignorado: mensagem nao foi enviada para meu proprio chat.');
-    sendJson(response, 200, { ok: true, ignored: 'not_self_chat' });
+  if (!selfNumber && config.zproFromMeOnly && !zproMessage.fromMe) {
+    console.log('Webhook ZPRO ignorado: mensagem nao foi enviada por mim.');
+    sendJson(response, 200, { ok: true, ignored: 'not_from_me' });
     return;
   }
 
