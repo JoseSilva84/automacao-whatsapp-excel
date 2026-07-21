@@ -13,6 +13,8 @@ module.exports = {
   geminiModel: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
   whatsappSelfChatName: process.env.WHATSAPP_SELF_CHAT_NAME || 'Voce',
   wahaSessionName: process.env.WAHA_SESSION_NAME || '',
+  zproFromMeOnly: bool(process.env.ZPRO_FROM_ME_ONLY, true),
+  zproSelfNumber: process.env.ZPRO_SELF_NUMBER || '',
   webhookSecret: process.env.WEBHOOK_SECRET || '',
   timezone: process.env.TIMEZONE || 'America/Fortaleza',
   googleCalendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
