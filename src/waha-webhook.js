@@ -88,6 +88,11 @@ function extractZproMessage(event) {
   );
 
   const remoteJid = findFirstString(
+    key.peer_recipient_pn,
+    message.key?.peer_recipient_pn,
+    data.key?.peer_recipient_pn,
+    message.peer_recipient_pn,
+    data.peer_recipient_pn,
     message.remoteJid,
     data.remoteJid,
     key.remoteJid,
