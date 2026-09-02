@@ -20,7 +20,7 @@ function createZproTextSender() {
     }
 
     const url = resolveSendTextUrl(integrationUrl, baseUrl);
-    const body = buildSendTextBody(text, number);
+    const body = buildSendTextBody(text, number, resolveExternalKey(integrationUrl));
 
     const response = await fetch(url, {
       method: 'POST',
@@ -61,8 +61,9 @@ function resolveSendTextUrl(integrationUrl, baseUrl) {
   return `${baseUrl}/api/messages/sendText/${encodeURIComponent(config.zproChannelId)}`;
 }
 
-function buildSendTextBody(text, number) {
+function buildSendTextBody(text, number, externalKey) {
   return {
+    externalKey,
     number,
     phone: number,
     to: number,
@@ -70,6 +71,18 @@ function buildSendTextBody(text, number) {
     text,
     message: text
   };
+}
+
+function resolveExternalKey(integrationUrl) {
+  if (config.zproExternalKey) return config.zproExternalKey;
+  if (!integrationUrl) return '';
+
+  try {
+    const url = new URL(integrationUrl);
+    return url.pathname.split('/').filter(Boolean).pop() || '';
+  } catch {
+    return integrationUrl.split('/').filter(Boolean).pop() || '';
+  }
 }
 
 function parseJson(value) {

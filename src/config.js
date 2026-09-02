@@ -18,6 +18,7 @@ module.exports = {
   zproIntegrationUrl: process.env.ZPRO_INTEGRATION_URL || '',
   zproApiBaseUrl: process.env.ZPRO_API_BASE_URL || '',
   zproApiToken: process.env.ZPRO_API_TOKEN || '',
+  zproExternalKey: process.env.ZPRO_EXTERNAL_KEY || '',
   zproChannelId: process.env.ZPRO_CHANNEL_ID || '',
   zproSendTextPath: process.env.ZPRO_SEND_TEXT_PATH || '',
   webhookSecret: process.env.WEBHOOK_SECRET || '',
