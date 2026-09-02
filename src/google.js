@@ -107,6 +107,43 @@ async function appendToGoogleSheet(appointment) {
   return response.data;
 }
 
+async function readSpreadsheetValues(range = config.agendaReminderSheetRange) {
+  if (!config.googleSpreadsheetId) {
+    throw new Error('GOOGLE_SPREADSHEET_ID nao configurado.');
+  }
+
+  const auth = await getSheetsAuthClient();
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId: config.googleSpreadsheetId,
+    fields: 'sheets.properties.title'
+  });
+
+  const sheetTitles = spreadsheet.data.sheets
+    ?.map((sheet) => sheet.properties?.title)
+    .filter(Boolean) || [];
+
+  const worksheets = [];
+  for (const title of sheetTitles) {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: config.googleSpreadsheetId,
+      range: `'${String(title).replace(/'/g, "''")}'!${range}`,
+      valueRenderOption: 'FORMATTED_VALUE',
+      dateTimeRenderOption: 'FORMATTED_STRING'
+    }).catch((error) => {
+      console.warn(`Nao foi possivel ler a aba "${title}":`, error.message);
+      return null;
+    });
+
+    worksheets.push({
+      title,
+      rows: response?.data?.values || []
+    });
+  }
+
+  return worksheets;
+}
+
 async function ensureSheetExists(sheets) {
   const spreadsheet = await sheets.spreadsheets.get({
     spreadsheetId: config.googleSpreadsheetId,
@@ -147,4 +184,4 @@ async function ensureSheetHeader(sheets) {
   });
 }
 
-module.exports = { createCalendarEvent, appendToGoogleSheet };
+module.exports = { createCalendarEvent, appendToGoogleSheet, readSpreadsheetValues };

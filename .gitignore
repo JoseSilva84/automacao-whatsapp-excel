@@ -7,4 +7,5 @@ token.json
 service-account.json
 gen-lang-client-*.json
 agendamentos.xlsx
+agenda-reminders-sent.json
 npm-debug.log*

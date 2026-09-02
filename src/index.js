@@ -2,6 +2,7 @@ const qrcode = require('qrcode-terminal');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const config = require('./config');
 const { handleAppointmentText } = require('./appointment-handler');
+const { startAgendaReminderScheduler } = require('./agenda-reminder');
 
 const processedMessages = new Set();
 
@@ -21,6 +22,7 @@ client.on('qr', (qr) => {
 client.on('ready', async () => {
   console.log('WhatsApp conectado. Monitorando mensagens salvas no seu proprio chat.');
   console.log(`Chat configurado: "${config.whatsappSelfChatName}"`);
+  startAgendaReminderScheduler(client);
 });
 
 client.on('message_create', async (message) => {
