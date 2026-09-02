@@ -1,9 +1,11 @@
 const { google } = require('googleapis');
 const { authorize, authorizeServiceAccount } = require('./google-auth');
 const config = require('./config');
+const ExcelJS = require('exceljs');
 
 let calendarAuthClient;
 let sheetsAuthClient;
+let driveAuthClient;
 
 const sheetHeaders = ['Evento', 'Data', 'Horario', 'Local'];
 
@@ -36,6 +38,15 @@ async function getSheetsAuthClient() {
     sheetsAuthClient = await authorizeServiceAccount();
   }
   return sheetsAuthClient;
+}
+
+async function getDriveAuthClient() {
+  if (!driveAuthClient) {
+    driveAuthClient = await authorizeServiceAccount([
+      'https://www.googleapis.com/auth/drive.readonly'
+    ]);
+  }
+  return driveAuthClient;
 }
 
 function toCalendarEvent(appointment) {
@@ -112,6 +123,17 @@ async function readSpreadsheetValues(range = config.agendaReminderSheetRange) {
     throw new Error('GOOGLE_SPREADSHEET_ID nao configurado.');
   }
 
+  try {
+    return await readNativeGoogleSpreadsheetValues(range);
+  } catch (error) {
+    if (!isOfficeFileError(error)) throw error;
+
+    console.log('Arquivo no Drive esta em formato Excel. Lendo .xlsx pelo Google Drive.');
+    return readOfficeSpreadsheetValuesFromDrive();
+  }
+}
+
+async function readNativeGoogleSpreadsheetValues(range) {
   const auth = await getSheetsAuthClient();
   const sheets = google.sheets({ version: 'v4', auth });
   const spreadsheet = await sheets.spreadsheets.get({
@@ -142,6 +164,53 @@ async function readSpreadsheetValues(range = config.agendaReminderSheetRange) {
   }
 
   return worksheets;
+}
+
+async function readOfficeSpreadsheetValuesFromDrive() {
+  const auth = await getDriveAuthClient();
+  const drive = google.drive({ version: 'v3', auth });
+  const response = await drive.files.get(
+    {
+      fileId: config.googleSpreadsheetId,
+      alt: 'media'
+    },
+    {
+      responseType: 'arraybuffer'
+    }
+  );
+
+  const workbook = new ExcelJS.Workbook();
+  const buffer = Buffer.from(response.data);
+  await workbook.xlsx.load(buffer);
+
+  return workbook.worksheets.map((worksheet) => ({
+    title: worksheet.name,
+    rows: worksheetToRows(worksheet)
+  }));
+}
+
+function worksheetToRows(worksheet) {
+  const maxRow = Math.min(worksheet.rowCount, 80);
+  const maxColumn = worksheet.columnCount;
+  const rows = [];
+
+  for (let rowNumber = 1; rowNumber <= maxRow; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    const values = [];
+
+    for (let columnNumber = 1; columnNumber <= maxColumn; columnNumber += 1) {
+      values.push(row.getCell(columnNumber).value);
+    }
+
+    rows.push(values);
+  }
+
+  return rows;
+}
+
+function isOfficeFileError(error) {
+  return error?.errors?.some((item) => item.reason === 'failedPrecondition')
+    || String(error?.message || '').includes('must not be an Office file');
 }
 
 async function ensureSheetExists(sheets) {
