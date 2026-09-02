@@ -6,6 +6,7 @@ const { parseAgendaRows } = require('./agenda-reader');
 
 let running = false;
 const sentInCurrentRun = new Set();
+let lastStatusLog = '';
 
 function startAgendaReminderScheduler(sendTextMessage) {
   if (!config.agendaReminderEnabled) {
@@ -43,11 +44,14 @@ async function checkAndSendReminders(sendTextMessage, now = new Date()) {
       return isReminderDue(appointment.start, now);
     });
 
+    logReminderStatus(appointments, dueAppointments, sent, now);
+
     for (const appointment of dueAppointments) {
       await sendReminder(sendTextMessage, appointment);
       sent[appointment.id] = new Date().toISOString();
       sentInCurrentRun.add(appointment.id);
       await saveSentReminders(cleanOldSentReminders(sent, now));
+      console.log(`Lembrete marcado como enviado: ${appointment.title} - ${appointment.start}`);
     }
 
     if (dueAppointments.length) {
@@ -56,6 +60,24 @@ async function checkAndSendReminders(sendTextMessage, now = new Date()) {
   } finally {
     running = false;
   }
+}
+
+function logReminderStatus(appointments, dueAppointments, sent, now) {
+  const nextAppointment = uniqueAppointments(appointments)
+    .filter((appointment) => !sent[appointment.id] && !sentInCurrentRun.has(appointment.id))
+    .filter((appointment) => new Date(appointment.start).getTime() > now.getTime())
+    .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
+
+  const status = JSON.stringify({
+    total: appointments.length,
+    due: dueAppointments.length,
+    next: nextAppointment ? `${nextAppointment.title} - ${nextAppointment.start}` : 'nenhum'
+  });
+
+  if (status === lastStatusLog && dueAppointments.length === 0) return;
+
+  lastStatusLog = status;
+  console.log(`Agenda verificada: ${status}`);
 }
 
 function uniqueAppointments(appointments) {
@@ -108,7 +130,7 @@ function formatReminderMessage(appointment) {
   }).format(start);
 
   return [
-    'AGENDA:',
+    'Agenda:',
     `${appointment.title}`,
     `${date} às ${time}`,
     `Origem: ${appointment.source}`
