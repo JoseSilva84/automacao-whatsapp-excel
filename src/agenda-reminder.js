@@ -5,6 +5,8 @@ const { readSpreadsheetValues } = require('./google');
 const { parseAgendaRows } = require('./agenda-reader');
 
 let running = false;
+const sentInCurrentRun = new Set();
+
 function startAgendaReminderScheduler(sendTextMessage) {
   if (!config.agendaReminderEnabled) {
     console.log('Lembretes da agenda desligados. Defina AGENDA_REMINDER_ENABLED=true para ativar.');
@@ -36,23 +38,39 @@ async function checkAndSendReminders(sendTextMessage, now = new Date()) {
     const sent = await loadSentReminders();
     const worksheets = await readSpreadsheetValues();
     const appointments = parseAgendaRows(worksheets, { timezone: config.timezone });
-    const dueAppointments = appointments.filter((appointment) => {
-      if (sent[appointment.id]) return false;
+    const dueAppointments = uniqueAppointments(appointments).filter((appointment) => {
+      if (sent[appointment.id] || sentInCurrentRun.has(appointment.id)) return false;
       return isReminderDue(appointment.start, now);
     });
 
     for (const appointment of dueAppointments) {
       await sendReminder(sendTextMessage, appointment);
       sent[appointment.id] = new Date().toISOString();
+      sentInCurrentRun.add(appointment.id);
+      await saveSentReminders(cleanOldSentReminders(sent, now));
     }
 
-    await saveSentReminders(cleanOldSentReminders(sent, now));
     if (dueAppointments.length) {
       console.log(`${dueAppointments.length} lembrete(s) da agenda enviado(s).`);
     }
   } finally {
     running = false;
   }
+}
+
+function uniqueAppointments(appointments) {
+  const seen = new Set();
+  const unique = [];
+
+  for (const appointment of appointments) {
+    const key = appointment.id;
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    unique.push(appointment);
+  }
+
+  return unique;
 }
 
 function isReminderDue(start, now) {
