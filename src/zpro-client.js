@@ -2,12 +2,13 @@ const config = require('./config');
 
 function createZproTextSender() {
   return async function sendTextMessage(text) {
+    const integrationUrl = trimTrailingSlash(config.zproIntegrationUrl);
     const baseUrl = trimTrailingSlash(config.zproApiBaseUrl);
     const token = config.zproApiToken;
     const number = onlyDigits(config.zproSelfNumber);
 
-    if (!baseUrl) {
-      throw new Error('ZPRO_API_BASE_URL nao configurado.');
+    if (!integrationUrl && !baseUrl) {
+      throw new Error('ZPRO_INTEGRATION_URL ou ZPRO_API_BASE_URL nao configurado.');
     }
 
     if (!token) {
@@ -18,8 +19,7 @@ function createZproTextSender() {
       throw new Error('ZPRO_SELF_NUMBER nao configurado.');
     }
 
-    const path = resolveSendTextPath();
-    const url = `${baseUrl}${path}`;
+    const url = resolveSendTextUrl(integrationUrl, baseUrl);
     const body = buildSendTextBody(text, number);
 
     const response = await fetch(url, {
@@ -40,18 +40,25 @@ function createZproTextSender() {
   };
 }
 
-function resolveSendTextPath() {
+function resolveSendTextUrl(integrationUrl, baseUrl) {
   if (config.zproSendTextPath) {
-    return ensureLeadingSlash(
-      config.zproSendTextPath.replace('{channelId}', encodeURIComponent(config.zproChannelId))
+    const path = ensureLeadingSlash(
+      config.zproSendTextPath
+        .replace('{channelId}', encodeURIComponent(config.zproChannelId))
+        .replace('{integrationUrl}', integrationUrl)
     );
+    return `${baseUrl || integrationUrl}${path}`;
+  }
+
+  if (integrationUrl) {
+    return integrationUrl;
   }
 
   if (!config.zproChannelId) {
     throw new Error('ZPRO_CHANNEL_ID nao configurado.');
   }
 
-  return `/api/messages/sendText/${encodeURIComponent(config.zproChannelId)}`;
+  return `${baseUrl}/api/messages/sendText/${encodeURIComponent(config.zproChannelId)}`;
 }
 
 function buildSendTextBody(text, number) {

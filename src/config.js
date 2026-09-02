@@ -15,6 +15,7 @@ module.exports = {
   wahaSessionName: process.env.WAHA_SESSION_NAME || '',
   zproFromMeOnly: bool(process.env.ZPRO_FROM_ME_ONLY, true),
   zproSelfNumber: process.env.ZPRO_SELF_NUMBER || '',
+  zproIntegrationUrl: process.env.ZPRO_INTEGRATION_URL || '',
   zproApiBaseUrl: process.env.ZPRO_API_BASE_URL || '',
   zproApiToken: process.env.ZPRO_API_TOKEN || '',
   zproChannelId: process.env.ZPRO_CHANNEL_ID || '',
