@@ -5,9 +5,7 @@ const { readSpreadsheetValues } = require('./google');
 const { parseAgendaRows } = require('./agenda-reader');
 
 let running = false;
-let selfChat = null;
-
-function startAgendaReminderScheduler(client) {
+function startAgendaReminderScheduler(sendTextMessage) {
   if (!config.agendaReminderEnabled) {
     console.log('Lembretes da agenda desligados. Defina AGENDA_REMINDER_ENABLED=true para ativar.');
     return null;
@@ -19,18 +17,18 @@ function startAgendaReminderScheduler(client) {
     `Lembretes da agenda ligados. Aviso ${config.agendaReminderMinutesBefore} minutos antes.`
   );
 
-  checkAndSendReminders(client).catch((error) => {
+  checkAndSendReminders(sendTextMessage).catch((error) => {
     console.error('Erro ao verificar lembretes da agenda:', error);
   });
 
   return setInterval(() => {
-    checkAndSendReminders(client).catch((error) => {
+    checkAndSendReminders(sendTextMessage).catch((error) => {
       console.error('Erro ao verificar lembretes da agenda:', error);
     });
   }, intervalMs);
 }
 
-async function checkAndSendReminders(client, now = new Date()) {
+async function checkAndSendReminders(sendTextMessage, now = new Date()) {
   if (running) return;
   running = true;
 
@@ -44,7 +42,7 @@ async function checkAndSendReminders(client, now = new Date()) {
     });
 
     for (const appointment of dueAppointments) {
-      await sendReminder(client, appointment);
+      await sendReminder(sendTextMessage, appointment);
       sent[appointment.id] = new Date().toISOString();
     }
 
@@ -65,8 +63,7 @@ function isReminderDue(start, now) {
   return currentTime >= reminderTime && currentTime < startTime;
 }
 
-async function sendReminder(client, appointment) {
-  const chat = await getSelfChat(client);
+async function sendReminder(sendTextMessage, appointment) {
   const message = formatReminderMessage(appointment);
 
   if (config.dryRun) {
@@ -74,24 +71,7 @@ async function sendReminder(client, appointment) {
     return;
   }
 
-  await client.sendMessage(chat.id._serialized, message);
-}
-
-async function getSelfChat(client) {
-  if (selfChat) return selfChat;
-
-  const chats = await client.getChats();
-  const configured = normalize(config.whatsappSelfChatName);
-  selfChat = chats.find((chat) => {
-    const name = normalize(chat.name || chat.formattedTitle || '');
-    return name === configured || name.includes(configured);
-  });
-
-  if (!selfChat) {
-    throw new Error(`Chat "${config.whatsappSelfChatName}" nao encontrado no WhatsApp.`);
-  }
-
-  return selfChat;
+  await sendTextMessage(message);
 }
 
 function formatReminderMessage(appointment) {
@@ -139,14 +119,6 @@ function cleanOldSentReminders(sent, now) {
   return Object.fromEntries(
     Object.entries(sent).filter(([, value]) => new Date(value).getTime() >= limit)
   );
-}
-
-function normalize(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase();
 }
 
 module.exports = {

@@ -3,6 +3,8 @@ require('dotenv').config();
 const http = require('http');
 const config = require('./config');
 const { handleAppointmentText } = require('./appointment-handler');
+const { startAgendaReminderScheduler } = require('./agenda-reminder');
+const { createZproTextSender } = require('./zpro-client');
 
 const processedMessages = new Set();
 const port = Number(config.port || 3000);
@@ -245,4 +247,5 @@ server.listen(port, () => {
   console.log(`WAHA: /webhooks/waha`);
   console.log(`ZPRO: /webhooks/zpro`);
   console.log(`Sessao esperada: ${config.wahaSessionName || 'qualquer sessao'}`);
+  startAgendaReminderScheduler(createZproTextSender());
 });

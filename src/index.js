@@ -22,7 +22,7 @@ client.on('qr', (qr) => {
 client.on('ready', async () => {
   console.log('WhatsApp conectado. Monitorando mensagens salvas no seu proprio chat.');
   console.log(`Chat configurado: "${config.whatsappSelfChatName}"`);
-  startAgendaReminderScheduler(client);
+  startAgendaReminderScheduler(sendSelfMessage);
 });
 
 client.on('message_create', async (message) => {
@@ -57,6 +57,21 @@ function normalize(value) {
 
 async function handleMessage(text) {
   await handleAppointmentText(text);
+}
+
+async function sendSelfMessage(text) {
+  const chats = await client.getChats();
+  const configured = normalize(config.whatsappSelfChatName);
+  const chat = chats.find((item) => {
+    const name = normalize(item.name || item.formattedTitle || '');
+    return name === configured || name.includes(configured);
+  });
+
+  if (!chat) {
+    throw new Error(`Chat "${config.whatsappSelfChatName}" nao encontrado no WhatsApp.`);
+  }
+
+  await client.sendMessage(chat.id._serialized, text);
 }
 
 client.initialize();
