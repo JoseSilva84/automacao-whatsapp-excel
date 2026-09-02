@@ -90,9 +90,9 @@ function formatReminderMessage(appointment) {
   }).format(start);
 
   return [
-    `Lembrete: em ${config.agendaReminderMinutesBefore} minutos`,
+    'Agenda:',
     `${appointment.title}`,
-    `${date} as ${time}`,
+    `${date} às ${time}`,
     `Origem: ${appointment.source}`
   ].join('\n');
 }
