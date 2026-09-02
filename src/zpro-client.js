@@ -5,7 +5,7 @@ function createZproTextSender() {
     const integrationUrl = trimTrailingSlash(config.zproIntegrationUrl);
     const baseUrl = trimTrailingSlash(config.zproApiBaseUrl);
     const token = config.zproApiToken;
-    const number = onlyDigits(config.zproSelfNumber);
+    const number = onlyDigits(config.zproTargetNumber);
 
     if (!integrationUrl && !baseUrl) {
       throw new Error('ZPRO_INTEGRATION_URL ou ZPRO_API_BASE_URL nao configurado.');
@@ -16,7 +16,7 @@ function createZproTextSender() {
     }
 
     if (!number) {
-      throw new Error('ZPRO_SELF_NUMBER nao configurado.');
+      throw new Error('ZPRO_TARGET_NUMBER ou ZPRO_SELF_NUMBER nao configurado.');
     }
 
     const url = resolveSendTextUrl(integrationUrl, baseUrl);
