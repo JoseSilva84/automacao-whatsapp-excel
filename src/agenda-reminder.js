@@ -90,7 +90,7 @@ function formatReminderMessage(appointment) {
   }).format(start);
 
   return [
-    'Agenda:',
+    'AGENDA:',
     `${appointment.title}`,
     `${date} às ${time}`,
     `Origem: ${appointment.source}`
